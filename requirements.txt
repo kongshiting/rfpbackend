@@ -6,3 +6,4 @@ google-auth==2.14.0
 google-auth-oauthlib==0.4.6
 google-auth-httplib2==0.1.0
 Werkzeug==2.2.3
+gunicorn==20.1.0
