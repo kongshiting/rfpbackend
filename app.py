@@ -20,6 +20,10 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
+SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")
+SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+DRIVE_FOLDER_ID = os.getenv("DRIVE_FOLDER_ID")
+TEMPLATE_DOC_ID = os.getenv("TEMPLATE_DOC_ID")
 
 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 client = gspread.authorize(creds)
