@@ -261,6 +261,8 @@ def upload_to_drive(file_path):
     file_id = uploaded_file.get("id")
     print(f"Uploaded file ID: {file_id}")
 
+    return uploaded_file
+
     def set_permission_with_retry(drive_service, file_id, max_retries=5, wait_seconds=5):
         for attempt in range(max_retries):
             try:
