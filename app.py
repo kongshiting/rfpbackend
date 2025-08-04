@@ -261,6 +261,8 @@ def upload_to_drive(file_path):
     ).execute()
 
     print(f"Uploaded file response: {uploaded_file}") 
+    file_id = uploaded_file.get("id")
+    print(f"Uploaded file ID: {file_id}")
 
     for attempt in range(5):
         try:
