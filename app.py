@@ -93,7 +93,7 @@ def submit_form():
 
         total_amount = 0
         expense_details = []
-        for i in range(1, expense_count + 1):
+        for i in range(1, 5):
             amount_str = request.form.get(f"expense{i}amount", "0")
             try:
                 amount = float(amount_str) if amount_str else 0
@@ -259,11 +259,22 @@ def upload_to_drive(file_path):
         supportsAllDrives=True
     ).execute()
 
-    drive_service.permissions().create(
-        fileId=uploaded_file["id"],
-        body={"type": "anyone", "role": "reader"},
-        fields="id"
-    ).execute()
+    file_id = uploaded_file["id"]
+
+    for attempt in range(3):
+        try:
+            time.sleep(1.5 * attempt)  # Exponential backoff: 0s, 1.5s, 3s
+            drive_service.permissions().create(
+                fileId=file_id,
+                body={"type": "anyone", "role": "reader"},
+                fields="id"
+            ).execute()
+            break  # Success
+        except HttpError as e:
+            if e.resp.status == 404 and attempt < 2:
+                continue  # Retry
+            raise  # Raise other errors or if max retries hit
+
 
 @app.route("/category-fields/<category>", methods=["GET"])
 def get_category_fields(category):
