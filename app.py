@@ -242,7 +242,7 @@ def insert_image_to_doc(doc_id, image_id):
 def upload_to_drive(file_path):
     """Uploads a file to Google Drive and returns file metadata."""
     file_name = os.path.basename(file_path)
-    mime_type = "application/pdf"
+    mime_type = "image/png" 
     
     media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
     file_metadata = {
@@ -260,6 +260,8 @@ def upload_to_drive(file_path):
     print(f"Uploaded file response: {uploaded_file}") 
     file_id = uploaded_file.get("id")
     print(f"Uploaded file ID: {file_id}")
+
+    set_permission_with_retry(drive_service, file_id)
 
     return uploaded_file
 
