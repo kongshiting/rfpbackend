@@ -32,6 +32,32 @@ sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 docs_service = build("docs", "v1", credentials=creds)
 drive_service = build("drive", "v3", credentials=creds)
 
+# Category-specific field mappings
+CATEGORY_FIELDS = {
+    "Meal": {
+        "fields": ["participantList", "mealPurpose"],
+        "doc_placeholders": {
+            "{{ParticipantList}}": "participantList",
+            "{{MealPurpose}}": "mealPurpose"
+        }
+    },
+    "Transport": {
+        "fields": ["transportType", "departure", "destination"],
+        "doc_placeholders": {
+            "{{TransportType}}": "transportType",
+            "{{Departure}}": "departure",
+            "{{Destination}}": "destination"
+        }
+    },
+    "Printing": {
+        "fields": ["printingDetails", "copiesCount"],
+        "doc_placeholders": {
+            "{{PrintingDetails}}": "printingDetails",
+            "{{CopiesCount}}": "copiesCount"
+        }
+    }
+}
+
 @app.route("/submit", methods=["POST"])
 def submit_form():
     try:
@@ -44,8 +70,15 @@ def submit_form():
         committee = request.form.get("committee")
         expense_count = int(request.form.get("expenseCount", "0"))
 
-        copy_metadata = {"name": f"RFP_{payee_name}_{int(time.time())}", "parents": [DRIVE_FOLDER_ID]}
-        copied_doc = drive_service.files().copy(fileId=TEMPLATE_DOC_ID, body=copy_metadata, supportsAllDrives=True).execute()
+        copy_metadata = {
+            "name": f"RFP_{payee_name}_{int(time.time())}",
+            "parents": [DRIVE_FOLDER_ID]
+        }
+        copied_doc = drive_service.files().copy(
+            fileId=TEMPLATE_DOC_ID,
+            body=copy_metadata,
+            supportsAllDrives=True
+        ).execute()
         doc_id = copied_doc.get("id")
 
         replace_text_in_doc(doc_id, {
@@ -56,82 +89,87 @@ def submit_form():
             "{{MatricNo}}": matric_no,
         })
 
-        receipt_no_1 = request.form.get("expense1receiptno", "").strip()
-        description_1 = request.form.get("expense1description", "").strip()
-        amount_1 = request.form.get("expense1amount", "").strip()
-        purchase_type_1 = request.form.get("expense1purchasetype", "").strip()
-        replace_text_in_doc(doc_id, {
-            "{{ReceiptNo1}}": receipt_no_1,
-            "{{Description1}}": description_1,
-            "{{Amount1}}": amount_1,
-            "{{PurchaseType1}}": purchase_type_1
-        })
+        total_amount = 0
+        expense_details = []
+        for i in range(1, expense_count + 1):
+            amount_str = request.form.get(f"expense{i}amount", "0")
+            try:
+                amount = float(amount_str) if amount_str else 0
+                total_amount += amount
+            except ValueError:
+                amount = 0
 
-        receipt_no_2 = request.form.get("expense2receiptno", "").strip()
-        description_2 = request.form.get("expense2description", "").strip()
-        amount_2 = request.form.get("expense2amount", "").strip()
-        purchase_type_2 = request.form.get("expense2purchasetype", "").strip()
-        replace_text_in_doc(doc_id, {
-            "{{ReceiptNo2}}": receipt_no_2,
-            "{{Description2}}": description_2,
-            "{{Amount2}}": amount_2,
-            "{{PurchaseType2}}": purchase_type_2
-        })
+            expense_details.append({
+                "receipt_no": request.form.get(f"expense{i}receiptno", ""),
+                "description": request.form.get(f"expense{i}description", ""),
+                "amount": amount_str,
+                "purchase_type": request.form.get(f"expense{i}purchasetype", "")
+            })
 
-        receipt_no_3 = request.form.get("expense3receiptno", "").strip()
-        description_3 = request.form.get("expense3description", "").strip()
-        amount_3 = request.form.get("expense3amount", "").strip()
-        purchase_type_3 = request.form.get("expense3purchasetype", "").strip()
-        replace_text_in_doc(doc_id, {
-            "{{ReceiptNo3}}": receipt_no_3,
-            "{{Description3}}": description_3,
-            "{{Amount3}}": amount_3,
-            "{{PurchaseType3}}": purchase_type_3
-        })
+        # Prepare base replacements
+        replacements = {
+            "{{Category}}": category,
+            "{{EventName}}": event_name,
+            "{{Committee}}": committee,
+            "{{PayeeName}}": payee_name,
+            "{{MatricNo}}": matric_no,
+            "{{TotalAmount}}": f"{total_amount:.2f}"
+        }
 
-        receipt_no_4 = request.form.get("expense4receiptno", "").strip()
-        description_4 = request.form.get("expense4description", "").strip()
-        amount_4 = request.form.get("expense4amount", "").strip()
-        purchase_type_4 = request.form.get("expense4purchasetype", "").strip()
-        replace_text_in_doc(doc_id, {
-            "{{ReceiptNo4}}": receipt_no_4,
-            "{{Description4}}": description_4,
-            "{{Amount4}}": amount_4,
-            "{{PurchaseType4}}": purchase_type_4
-        })
+        for i, expense in enumerate(expense_details, start=1):
+            replacements.update({
+                f"{{{{ReceiptNo{i}}}}}": expense["receipt_no"],
+                f"{{{{Description{i}}}}}": expense["description"],
+                f"{{{{Amount{i}}}}}": expense["amount"],
+                f"{{{{PurchaseType{i}}}}}": expense["purchase_type"]
+            })
 
-        receipt_no_5 = request.form.get("expense5receiptno", "").strip()
-        description_5 = request.form.get("expense5description", "").strip()
-        amount_5 = request.form.get("expense5amount", "").strip()
-        purchase_type_5 = request.form.get("expense5purchasetype", "").strip()
-        replace_text_in_doc(doc_id, {
-            "{{ReceiptNo5}}": receipt_no_5,
-            "{{Description5}}": description_5,
-            "{{Amount5}}": amount_5,
-            "{{PurchaseType5}}": purchase_type_5
-        })
+        # Add category-specific fields
+        if category in CATEGORY_FIELDS:
+            for placeholder, field_name in CATEGORY_FIELDS[category]["doc_placeholders"].items():
+                replacements[placeholder] = request.form.get(field_name, "")
 
-        file_url = ""
-        if "file" in request.files:
-            file = request.files["file"]
+        # Process all text replacements
+        replace_text_in_doc(doc_id, replacements)
+
+        file_urls = []
+        for file_key in request.files:
+            file = request.files[file_key]
             if file.filename:
                 file_path = os.path.join("uploads", file.filename)
                 file.save(file_path)
 
-                uploaded_file = upload_to_drive(file_path)
-                file_url = uploaded_file.get("webViewLink")
+                try:
+                    uploaded_file = upload_to_drive(file_path)
+                    file_url = uploaded_file.get("webViewLink")
+                    file_urls.append(file_url)
 
-                if file.filename.lower().endswith(("png", "jpg", "jpeg")):
-                    insert_image_to_doc(doc_id, uploaded_file.get("id"))
-                else:
-                    append_text_to_doc(doc_id, f"\nAttached PDF: {file_url}")
+                    if file.filename.lower().endswith(("png", "jpg", "jpeg")):
+                        insert_image_to_doc(doc_id, uploaded_file.get("id"))
+                    else:
+                        append_text_to_doc(doc_id, f"\nAttachment: {file_url}")
+                finally:
+                    # Clean up the uploaded file
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
 
-        sheet.append_row([
-            payee_name, matric_no, category, event_name, committee,
-            *[f"{request.form.get(f'expense{i}receiptno')} | {request.form.get(f'expense{i}description')} | {request.form.get(f'expense{i}amount')} | {request.form.get(f'expense{i}purchasetype')}" for i in range(1, expense_count + 1)]
-        ])
+        # Append to spreadsheet
+        sheet_row = [
+            payee_name,
+            matric_no,
+            category,
+            event_name,
+            committee,
+            *[f"{exp['receipt_no']} | {exp['description']} | {exp['amount']} | {exp['purchase_type']}" for exp in expense_details],
+            str(total_amount),
+            ", ".join(file_urls)
+        ]
+        sheet.append_row(sheet_row)
 
-        return jsonify({"message": "Form submitted successfully!", "doc_url": f"https://docs.google.com/document/d/{doc_id}"}), 200
+        return jsonify({
+            "message": "Form submitted successfully!",
+            "doc_url": f"https://docs.google.com/document/d/{doc_id}"
+        }), 200
 
     except Exception as e:
         print("===== ERROR TRACEBACK =====")
@@ -142,29 +180,90 @@ def submit_form():
 
 def replace_text_in_doc(doc_id, replacements):
     """Replaces placeholders in a Google Doc."""
-    requests = [{"replaceAllText": {"containsText": {"text": key, "matchCase": True}, "replaceText": val}} for key, val in replacements.items()]
-    docs_service.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
-
+    requests = []
+    for key, val in replacements.items():
+        if val:  # Only replace if there's a value
+            requests.append({
+                "replaceAllText": {
+                    "containsText": {"text": key, "matchCase": True},
+                    "replaceText": val
+                }
+            })
+    
+    if requests:
+        docs_service.documents().batchUpdate(
+            documentId=doc_id,
+            body={"requests": requests}
+        ).execute()
 
 def append_text_to_doc(doc_id, text):
     """Appends text to a Google Doc."""
-    requests = [{"insertText": {"location": {"index": 1}, "text": text}}]
-    docs_service.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
-
+    # Get document to find the end index
+    doc = docs_service.documents().get(documentId=doc_id).execute()
+    end_index = doc['body']['content'][-1]['endIndex'] - 1
+    
+    requests = [{
+        "insertText": {
+            "location": {"index": end_index},
+            "text": text + "\n"
+        }
+    }]
+    docs_service.documents().batchUpdate(
+        documentId=doc_id,
+        body={"requests": requests}
+    ).execute()
 
 def insert_image_to_doc(doc_id, image_id):
     """Inserts an image into a Google Doc."""
-    requests = [{"insertInlineImage": {"location": {"index": 1}, "uri": f"https://drive.google.com/uc?id={image_id}"}}]
-    docs_service.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
+    # Get document to find the end index
+    doc = docs_service.documents().get(documentId=doc_id).execute()
+    end_index = doc['body']['content'][-1]['endIndex'] - 1
+    
+    requests = [{
+        "insertInlineImage": {
+            "location": {"index": end_index},
+            "uri": f"https://drive.google.com/uc?id={image_id}",
+            "objectSize": {
+                "height": {"magnitude": 300, "unit": "PT"},
+                "width": {"magnitude": 400, "unit": "PT"}
+            }
+        }
+    }]
+    docs_service.documents().batchUpdate(
+        documentId=doc_id,
+        body={"requests": requests}
+    ).execute()
 
 
 def upload_to_drive(file_path):
     """Uploads a file to Google Drive and returns file metadata."""
-    media = MediaFileUpload(file_path, resumable=True)
-    file_metadata = {"name": os.path.basename(file_path), "parents": [DRIVE_FOLDER_ID]}
-    return drive_service.files().create(body=file_metadata, media_body=media, fields="id, webViewLink").execute()
+    file_name = os.path.basename(file_path)
+    mime_type = "application/pdf"
+    
+    if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
+        mime_type = "image/jpeg"
+    
+    media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
+    file_metadata = {
+        "name": file_name,
+        "parents": [DRIVE_FOLDER_ID]
+    }
+    
+    return drive_service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields="id, webViewLink",
+        supportsAllDrives=True
+    ).execute()
+
+@app.route("/category-fields/<category>", methods=["GET"])
+def get_category_fields(category):
+    """Returns the additional fields required for a specific category."""
+    fields = CATEGORY_FIELDS.get(category, {}).get("fields", [])
+    return jsonify({"fields": fields})
 
 if __name__ == "__main__":
     os.makedirs("uploads", exist_ok=True)
     app.run(debug=True)
+
 
