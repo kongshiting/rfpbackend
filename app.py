@@ -272,7 +272,7 @@ def upload_to_drive(file_path):
         except HttpError as e:
             if e.resp.status == 404:
                 print(f"File not ready yet (attempt {attempt+1})")
-                time.sleep(2)
+                time.sleep(5)
                 continue
             else:
                 raise
