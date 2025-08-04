@@ -283,7 +283,8 @@ def upload_to_drive(file_path):
             drive_service.permissions().create(
                 fileId=file_id,
                 body={"type": "anyone", "role": "reader"},
-                fields="id"
+                fields="id",
+                supportsAllDrives=True
             ).execute()
             break  # Success
         except HttpError as e:
