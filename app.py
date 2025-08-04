@@ -244,9 +244,6 @@ def upload_to_drive(file_path):
     file_name = os.path.basename(file_path)
     mime_type = "application/pdf"
     
-    if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
-        mime_type = "image/jpeg"
-    
     media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
     file_metadata = {
         "name": file_name,
@@ -264,34 +261,25 @@ def upload_to_drive(file_path):
     file_id = uploaded_file.get("id")
     print(f"Uploaded file ID: {file_id}")
 
-    for attempt in range(5):
-        try:
-            # Try fetching file metadata
-            drive_service.files().get(fileId=file_id, fields="id").execute()
-            break
-        except HttpError as e:
-            if e.resp.status == 404:
-                print(f"File not ready yet (attempt {attempt+1})")
-                time.sleep(5)
-                continue
-            else:
-                raise
-
-    for attempt in range(3):
-        try:
-            time.sleep(2 + attempt * 2) 
-            drive_service.permissions().create(
-                fileId=file_id,
-                body={"type": "anyone", "role": "reader"},
-                fields="id",
-                supportsAllDrives=True
-            ).execute()
-            break  # Success
-        except HttpError as e:
-            if e.resp.status == 404 and attempt < 2:
-                continue  # Retry
-            raise  # Raise other errors or if max retries hit
-
+    def set_permission_with_retry(drive_service, file_id, max_retries=5, wait_seconds=5):
+        for attempt in range(max_retries):
+            try:
+                drive_service.permissions().create(
+                    fileId=file_id,
+                    body={"type": "anyone", "role": "reader"},
+                    fields="id",
+                    supportsAllDrives=True
+                ).execute()
+                print("✅ Permission set.")
+                return
+            except HttpError as e:
+                if e.resp.status == 404:
+                    print(f"File not ready yet (attempt {attempt+1})")
+                    time.sleep(wait_seconds)
+                else:
+                    print(f"Unexpected error: {e}")
+                    raise
+        raise Exception("File never became ready for permissions.")
 
 @app.route("/category-fields/<category>", methods=["GET"])
 def get_category_fields(category):
