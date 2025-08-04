@@ -88,7 +88,7 @@ def submit_form():
             "{{Committee}}": committee,
             "{{PayeeName}}": payee_name,
             "{{MatricNo}}": matric_no,
-            "{{NUSNET}}": nusNetID,
+            "{{NUSNET}}": nus_net_id,
         })
 
         total_amount = 0
