@@ -260,11 +260,15 @@ def upload_to_drive(file_path):
         supportsAllDrives=True
     ).execute()
 
-    file_id = uploaded_file["id"]
+    print(f"Uploaded file response: {uploaded_file}") 
+
+    file_id = uploaded_file.get("id")
+    if not file_id:
+        raise Exception("File upload failed: No file ID returned.")
 
     for attempt in range(3):
         try:
-            time.sleep(1.5 * attempt)  # Exponential backoff: 0s, 1.5s, 3s
+            time.sleep(2 + attempt * 2) 
             drive_service.permissions().create(
                 fileId=file_id,
                 body={"type": "anyone", "role": "reader"},
