@@ -262,9 +262,18 @@ def upload_to_drive(file_path):
 
     print(f"Uploaded file response: {uploaded_file}") 
 
-    file_id = uploaded_file.get("id")
-    if not file_id:
-        raise Exception("File upload failed: No file ID returned.")
+    for attempt in range(5):
+        try:
+            # Try fetching file metadata
+            drive_service.files().get(fileId=file_id, fields="id").execute()
+            break
+        except HttpError as e:
+            if e.resp.status == 404:
+                print(f"File not ready yet (attempt {attempt+1})")
+                time.sleep(2)
+                continue
+            else:
+                raise
 
     for attempt in range(3):
         try:
