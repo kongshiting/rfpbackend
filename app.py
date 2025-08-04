@@ -139,7 +139,7 @@ def submit_form():
         for file_key in request.files:
             file = request.files[file_key]
             if file.filename:
-                file_path = os.path.join("uploads", file.filename)
+                file_path = os.path.join("/tmp", file.filename)
                 file.save(file_path)
 
                 try:
