@@ -252,11 +252,17 @@ def upload_to_drive(file_path):
         "parents": [DRIVE_FOLDER_ID]
     }
     
-    return drive_service.files().create(
+    uploaded_file = drive_service.files().create(
         body=file_metadata,
         media_body=media,
         fields="id, webViewLink",
         supportsAllDrives=True
+    ).execute()
+
+    drive_service.permissions().create(
+        fileId=uploaded_file["id"],
+        body={"type": "anyone", "role": "reader"},
+        fields="id"
     ).execute()
 
 @app.route("/category-fields/<category>", methods=["GET"])
