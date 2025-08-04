@@ -65,6 +65,7 @@ def submit_form():
         print("Form data:", request.form)
         payee_name = request.form.get("payeeName")
         matric_no = request.form.get("matricNo")
+        nus_net_id = request.form.get("nusNetID")
         category = request.form.get("category")
         event_name = request.form.get("eventName")
         committee = request.form.get("committee")
@@ -87,6 +88,7 @@ def submit_form():
             "{{Committee}}": committee,
             "{{PayeeName}}": payee_name,
             "{{MatricNo}}": matric_no,
+            "{{NUSNET}}": nusNetID,
         })
 
         total_amount = 0
@@ -113,6 +115,7 @@ def submit_form():
             "{{Committee}}": committee,
             "{{PayeeName}}": payee_name,
             "{{MatricNo}}": matric_no,
+            "{{NUSNET}}": nusNetID,
             "{{TotalAmount}}": f"{total_amount:.2f}"
         }
 
